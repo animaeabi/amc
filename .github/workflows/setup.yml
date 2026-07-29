@@ -1,0 +1,31 @@
+name: setup-check
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "trigger/setup*"
+      - "amc_seat_monitor.py"
+
+permissions:
+  contents: write
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify AMC key, theatre, Telegram; capture chat id; send test message
+        env:
+          AMC_VENDOR_KEY: ${{ secrets.AMC_VENDOR_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python3 amc_seat_monitor.py --setup
+      - name: Persist results
+        if: always()
+        run: |
+          git config user.name "seat-radar"
+          git config user.email "actions@users.noreply.github.com"
+          git pull --rebase || true
+          git add -A state.json setup_report.json 2>/dev/null || true
+          git diff --cached --quiet || (git commit -m "setup report [skip ci]" && (git push || (git pull --rebase && git push) || true))
