@@ -1,0 +1,37 @@
+name: monitor
+on:
+  schedule:
+    - cron: "7 * * * *"
+  workflow_dispatch:
+  push:
+    paths:
+      - "trigger/monitor*"
+      - "amc_seat_monitor.py"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: monitor
+  cancel-in-progress: true
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 57
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run seat radar (polls every 90s for ~53 min)
+        env:
+          AMC_VENDOR_KEY: ${{ secrets.AMC_VENDOR_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python3 amc_seat_monitor.py --duration 3180 --poll 90
+      - name: Persist state
+        if: always()
+        run: |
+          git config user.name "seat-radar"
+          git config user.email "actions@users.noreply.github.com"
+          git pull --rebase || true
+          git add -A state.json setup_report.json seatmaps.json seatmap.txt 2>/dev/null || true
+          git diff --cached --quiet || (git commit -m "state update [skip ci]" && (git push || (git pull --rebase && git push) || true))
