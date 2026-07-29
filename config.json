@@ -1,0 +1,14 @@
+{
+  "movie_query": "odyssey",
+  "theatre_query": "metreon",
+  "theatre_id": null,
+  "rolling_days": 14,
+  "target_seats": "",
+  "min_seats": 1,
+  "require_attributes": [
+    "imax"
+  ],
+  "include_accessible": false,
+  "timezone": "America/Los_Angeles",
+  "request_gap": 0.1
+}
