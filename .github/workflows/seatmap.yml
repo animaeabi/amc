@@ -1,0 +1,31 @@
+name: seatmap
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "trigger/seatmap*"
+      - "config.json"
+
+permissions:
+  contents: write
+
+jobs:
+  map:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Dump live seat maps for matching showtimes
+        env:
+          AMC_VENDOR_KEY: ${{ secrets.AMC_VENDOR_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python3 amc_seat_monitor.py --map
+      - name: Persist seat maps
+        if: always()
+        run: |
+          git config user.name "seat-radar"
+          git config user.email "actions@users.noreply.github.com"
+          git pull --rebase || true
+          git add -A state.json seatmaps.json seatmap.txt 2>/dev/null || true
+          git diff --cached --quiet || (git commit -m "seat maps [skip ci]" && (git push || (git pull --rebase && git push) || true))
